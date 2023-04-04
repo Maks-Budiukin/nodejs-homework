@@ -1,12 +1,11 @@
 const express = require('express');
-const contactsOperations = require('../../models/contacts');
-const schema = require('../../schemas/contactSchemas');
-
+const { contacts: ctrl } = require("../../controllers");
+const { joiAdd, joiUpdate, joiUpdateStatus } = require("../../models/contact");
 const router = express.Router()
 
 router.get('/', async (req, res, next) => {
     try {
-      const contacts = await contactsOperations.listContacts();
+      const contacts = await ctrl.listContacts();
       res.json({
         status: "success",
         code: 200,
@@ -17,10 +16,32 @@ router.get('/', async (req, res, next) => {
     }
 })
 
+router.post('/', async (req, res, next) => {
+  try {
+    const { body } = req;
+    const { error } = joiAdd.validate(body);
+    if (error) {
+      error.status = 400;
+      throw error;
+    }
+    const newContact = await ctrl.addContact(body);
+    
+    res.status(201).json({
+        status: "success",
+        code: 201,
+        result: newContact,
+      })
+    
+  } catch (error) {
+    next(error);
+  }
+})
+
 router.get('/:contactId', async (req, res, next) => {
   try {
     const { contactId } = req.params;
-    const contactById = await contactsOperations.getContactById(contactId);
+
+    const contactById = await ctrl.getContactById(contactId);
 
     if (!contactById) {
       const error = new Error(`Contact with ID "${contactId}" not found!`);
@@ -41,31 +62,10 @@ router.get('/:contactId', async (req, res, next) => {
   
 })
 
-router.post('/', async (req, res, next) => {
-  try {
-    const { body } = req;
-    const { error } = schema.add.validate(body);
-    if (error) {
-      error.status = 400;
-      throw error;
-    }
-    const newContact = await contactsOperations.addContact(body);
-    
-    res.status(201).json({
-        status: "success",
-        code: 201,
-        result: newContact,
-      })
-    
-  } catch (error) {
-    next(error);
-  }
-})
-
 router.delete('/:contactId', async (req, res, next) => {
   try {
     const { contactId } = req.params;
-    const result = await contactsOperations.removeContact(contactId);
+    const result = await ctrl.removeContact(contactId);
     if (!result) {
       const error = new Error(`Contact with ID "${contactId}" not found!`);
       error.status = 404;
@@ -85,13 +85,40 @@ router.delete('/:contactId', async (req, res, next) => {
 router.put('/:contactId', async (req, res, next) => {
   try {
     const { body } = req;
-    const { error } = schema.update.validate(body);
+    const { error } = joiUpdate.validate(body);
     if (error) {
       error.status = 400;
       throw error;
     }
     const { contactId } = req.params;
-    const result = await contactsOperations.updateContact(contactId, body);
+    const result = await ctrl.updateContact(contactId, body);
+    res.json({
+        status: "success",
+        code: 200,
+        message: `Contact with ID ${result.id} was updated!`,
+        updatedContact: result,
+      })
+  } catch (error) {
+    next(error);
+  }
+})
+
+router.patch('/:contactId', async (req, res, next) => {
+  try {
+    const { body } = req;
+    
+    const { error } = joiUpdateStatus.validate(body);
+    if (error) {
+      error.status = 400;
+      throw error;
+    }
+    const { contactId } = req.params;
+    const result = await ctrl.updateStatusContact(contactId, body);
+    if (!result) {
+      const error = new Error(`Contact with ID "${contactId}" not found!`);
+      error.status = 404;
+      throw error;
+    }
     res.json({
         status: "success",
         code: 200,
