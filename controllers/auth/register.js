@@ -2,6 +2,7 @@ const { User } = require('../../models/user');
 const bcrypt = require('bcryptjs');
 const { joiRegister } = require('../../models/user')
 const { Conflict, BadRequest } = require("http-errors");
+const gravatar = require('gravatar');
 
 const register = async (req, res, next) => {
     try {
@@ -18,7 +19,9 @@ const register = async (req, res, next) => {
     
     const hashPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(10));    
 
-    const newUser = await User.create({name, email, password: hashPassword});
+    const avatarURL = gravatar.url(email)
+        
+    const newUser = await User.create({name, email, password: hashPassword, avatarURL});
 
     res.status(201).json({
         status: "success",
@@ -26,6 +29,7 @@ const register = async (req, res, next) => {
         user: {
             email: newUser.email,
             subscription: newUser.subscription,
+            avatar: newUser.avatarURL
         }
       })
     } catch (error) {
