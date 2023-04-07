@@ -7,7 +7,6 @@ const avatarsDir = path.join(__dirname, "../../", "public", "avatars");
 
 const addAvatar = async (req, res, next) => { 
     const { path: tempDir, originalname } = req.file;
-    console.log("REQ.FILE", req.file)
     const { _id } = req.user;
     const uniqueAvatarName = `${_id}_${originalname}`;
 
@@ -25,6 +24,7 @@ const addAvatar = async (req, res, next) => {
         await User.findByIdAndUpdate(_id, { avatarURL });
         res.json({avatarURL})
     } catch (error) {
+        await fs.unlink(tempDir);
         next(error)
     }
 }
